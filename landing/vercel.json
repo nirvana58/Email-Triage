@@ -1,0 +1,15 @@
+{
+  "version": 2,
+  "cleanUrls": true,
+  "trailingSlash": false,
+  "framework": null,
+  "buildCommand": "npm install && npm run build",
+  "installCommand": "npm install",
+  "outputDirectory": ".",
+  "rewrites": [
+    {
+      "source": "/(.*)",
+      "destination": "/index.html"
+    }
+  ]
+}
