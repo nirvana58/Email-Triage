@@ -1,0 +1,10 @@
+fastapi
+uvicorn[standard]
+sqlalchemy
+extract-msg
+python-multipart
+tldextract
+requests
+httpx
+python-whois
+python-dotenv

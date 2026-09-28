@@ -1,0 +1,89 @@
+# Python
+__pycache__/
+*.py[cod]
+*$py.class
+*.so
+.Python
+env/
+venv/
+.venv/
+ENV/
+pythonenv*
+
+# Virtual environments
+.env
+.env.*
+.venv/
+venv/
+
+# IDE / editor
+.vscode/
+.idea/
+*.swp
+*.swo
+*.tmp
+.DS_Store
+Thumbs.db
+
+# Python packaging / build
+build/
+dist/
+*.egg-info/
+.eggs/
+*.egg
+pip-wheel-metadata/
+
+# Testing / coverage
+.pytest_cache/
+.coverage
+.coverage.*
+htmlcov/
+.tox/
+.nox/
+
+# Logs
+*.log
+logs/
+
+# Local runtime files
+*.sqlite3
+*.db
+*.pkl
+*.bak
+
+# Secrets / credentials
+secrets.json
+*.pem
+*.key
+*.crt
+config.local.*
+
+# Node / frontend (if used in the same project)
+node_modules/
+.npm/
+.pnpm-store/
+.next/
+out/
+*.tsbuildinfo
+
+# Generated frontend builds
+frontend/dist/
+frontend/build/
+landing/.cache/
+
+# Local app data
+uploads/
+cache/
+.tmp/
+
+# OS
+Desktop.ini
+
+# Project-specific local files
+*.local
+sample_output/
+output/
+
+# If you keep reports or generated analytics locally, ignore them optionally
+# reports/
+# data/
