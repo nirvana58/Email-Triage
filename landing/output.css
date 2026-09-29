@@ -870,7 +870,7 @@ body {
 .hero-background {
   position: relative;
   overflow: hidden;
-  background: linear-gradient(180deg, #edebfc 0%, #ffffff 88%);
+  background: none;
   isolation: isolate;
 }
 
