@@ -20,7 +20,7 @@ from sqlalchemy.orm import sessionmaker
 from . import parser, threat_intel, phishguard_bridge
 from .models import Base, Analysis, ExtractedUrl, ExtractedAttachment, ReceivedHop
 
-DATABASE_URL = os.getenv("DATABASE_URL", "${{ zephyr.proxy.rlwy.net:56414 }}")
+DATABASE_URL = os.getenv("DATABASE_URL", "sqlite:///./analyzer.db")
 if DATABASE_URL.startswith("postgres://"):
     DATABASE_URL = DATABASE_URL.replace("postgres://", "postgresql+psycopg://", 1)
 elif DATABASE_URL.startswith("postgresql://"):
