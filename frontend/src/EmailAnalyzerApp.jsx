@@ -45,6 +45,9 @@ const DEMO_HISTORY = [
   { id: 3, filename: "quarterly_report.eml", timestamp: "Mon, 09:20", flag_count: 0 },
 ];
 
+const API_BASE_URL = (import.meta.env.VITE_API_URL || "").replace(/\/+$/, "");
+const apiUrl = (path) => `${API_BASE_URL}${path}`;
+
 const toneColor = (tone) =>
   tone === "danger" ? "var(--color-danger)" : tone === "warning" ? "var(--color-warning)" : "var(--color-success)";
 
@@ -312,7 +315,7 @@ export default function EmailAnalyzerApp() {
 
   const refreshHistory = useCallback(async () => {
     try {
-      const res = await fetch("/analyses");
+      const res = await fetch(apiUrl("/analyses"));
       if (!res.ok) throw new Error("backend unavailable");
       const data = await res.json();
       setHistory(data);
@@ -334,7 +337,7 @@ export default function EmailAnalyzerApp() {
       return;
     }
     try {
-      const res = await fetch(`/analyses/${item.id}`);
+      const res = await fetch(apiUrl(`/analyses/${item.id}`));
       if (!res.ok) throw new Error("not found");
       const data = await res.json();
       setReport(data);
@@ -349,7 +352,7 @@ export default function EmailAnalyzerApp() {
     try {
       const form = new FormData();
       form.append("file", file);
-      const res = await fetch("/analyze", { method: "POST", body: form });
+      const res = await fetch(apiUrl("/analyze"), { method: "POST", body: form });
       if (!res.ok) throw new Error("backend unavailable");
       const data = await res.json();
       setReport(data);
@@ -426,7 +429,7 @@ export default function EmailAnalyzerApp() {
                       <RowLabel>Status</RowLabel>
                       <RowValue>Report generated for every link found in this email</RowValue>
                       <a
-                        href={`/analyses/${report.id}/phishguard-report`}
+                        href={apiUrl(`/analyses/${report.id}/phishguard-report`)}
                         download
                         style={{ textDecoration: "none" }}
                       >

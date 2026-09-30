@@ -45,8 +45,8 @@ app.add_middleware(
     CORSMiddleware,
     allow_origins=[
         "http://localhost:5173",
-        "https://email-triage-xpk6.vercel.app/",
-        "https://email-triage-19oh-chi.vercel.app/",
+        "https://email-triage-xpk6.vercel.app",
+        "https://email-triage-19oh-chi.vercel.app",
     ],
     allow_credentials=True,
     allow_methods=["*"],
