@@ -5,6 +5,7 @@ API surface:
   GET  /analyses/{id}    full detail for one past analysis
 """
 import tempfile
+import os
 from pathlib import Path
 
 from dotenv import load_dotenv
@@ -19,8 +20,17 @@ from sqlalchemy.orm import sessionmaker
 from . import parser, threat_intel, phishguard_bridge
 from .models import Base, Analysis, ExtractedUrl, ExtractedAttachment, ReceivedHop
 
-DATABASE_URL = "sqlite:///./analyzer.db"
-engine = create_engine(DATABASE_URL, connect_args={"check_same_thread": False})
+DATABASE_URL = os.getenv("DATABASE_URL", "${{ Postgres.DATABASE_PRIVATE_URL }}")
+if DATABASE_URL.startswith("postgres://"):
+    DATABASE_URL = DATABASE_URL.replace("postgres://", "postgresql+psycopg://", 1)
+elif DATABASE_URL.startswith("postgresql://"):
+    DATABASE_URL = DATABASE_URL.replace("postgresql://", "postgresql+psycopg://", 1)
+
+engine_options = {"pool_pre_ping": True}
+if DATABASE_URL.startswith("sqlite:"):
+    engine_options["connect_args"] = {"check_same_thread": False}
+
+engine = create_engine(DATABASE_URL, **engine_options)
 SessionLocal = sessionmaker(bind=engine)
 Base.metadata.create_all(engine)
 
@@ -29,7 +39,12 @@ app = FastAPI(title="Phishing Email Analyzer")
 # Loosen for local dev with a separate React frontend; tighten before deploying.
 app.add_middleware(
     CORSMiddleware,
-    allow_origins=["http://localhost:5173"],
+    allow_origins=[
+        "http://localhost:5173",
+        "https://email-triage-xpk6.vercel.app/",
+        "https://email-triage-19oh-chi.vercel.app/",
+    ],
+    allow_credentials=True,
     allow_methods=["*"],
     allow_headers=["*"],
 )
