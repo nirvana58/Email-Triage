@@ -20,7 +20,10 @@ from sqlalchemy.orm import sessionmaker
 from . import parser, threat_intel, phishguard_bridge
 from .models import Base, Analysis, ExtractedUrl, ExtractedAttachment, ReceivedHop
 
-DATABASE_URL = os.getenv("DATABASE_URL", "sqlite:///./analyzer.db")
+DATABASE_URL = os.getenv("DATABASE_URL")
+if not DATABASE_URL and os.getenv("RAILWAY_ENVIRONMENT"):
+    raise RuntimeError("DATABASE_URL is missing. Link the Railway PostgreSQL DATABASE_URL to this service.")
+DATABASE_URL = DATABASE_URL or "sqlite:///./analyzer.db"
 if DATABASE_URL.startswith("postgres://"):
     DATABASE_URL = DATABASE_URL.replace("postgres://", "postgresql+psycopg://", 1)
 elif DATABASE_URL.startswith("postgresql://"):
@@ -33,6 +36,7 @@ if DATABASE_URL.startswith("sqlite:"):
 engine = create_engine(DATABASE_URL, **engine_options)
 SessionLocal = sessionmaker(bind=engine)
 Base.metadata.create_all(engine)
+print(f"Database schema ready ({engine.dialect.name}).")
 
 app = FastAPI(title="Phishing Email Analyzer")
 
