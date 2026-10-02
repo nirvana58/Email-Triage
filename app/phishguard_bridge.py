@@ -10,7 +10,7 @@ logger = logging.getLogger(__name__)
 PHISHGUARD_BASE_URL = os.environ.get("PHISHGUARD_BASE_URL", "http://localhost:8001").rstrip("/")
 PHISHGUARD_SCAN_PATH = "/scan"
 PHISHGUARD_BATCH_PATH = "/batch"
-PHISHGUARD_USE_LLM = os.environ.get("PHISHGUARD_USE_LLM", "false").strip().lower() in {
+PHISHGUARD_USE_LLM = os.environ.get("PHISHGUARD_USE_LLM", "true").strip().lower() in {
     "1", "true", "yes", "on",
 }
 PHISHGUARD_TIMEOUT = float(os.environ.get("PHISHGUARD_TIMEOUT", "300"))
