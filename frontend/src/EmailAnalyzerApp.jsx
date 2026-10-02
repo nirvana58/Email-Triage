@@ -77,6 +77,13 @@ const Shell = styled.div`
   height: 100vh;
   width: 100%;
   overflow: hidden;
+  @media (max-width: 700px) {
+    flex-direction: column;
+    height: auto;
+    min-height: 100vh;
+    min-height: 100dvh;
+    overflow: visible;
+  }
 `;
 
 const Sidebar = styled.aside`
@@ -87,6 +94,62 @@ const Sidebar = styled.aside`
   display: flex;
   flex-direction: column;
   padding: 20px 16px;
+  @media (max-width: 700px) {
+    display: grid;
+    grid-template-columns: minmax(0, 1fr) auto;
+    grid-template-areas:
+      "brand create"
+      "history theme"
+      "list list";
+    gap: 8px 12px;
+    width: 100%;
+    flex: 0 0 auto;
+    padding: 12px 14px 10px;
+    border-right: 0;
+    border-bottom: 2px solid var(--color-ink);
+
+    > a {
+      grid-area: brand;
+      min-width: 0;
+      margin-bottom: 0;
+    }
+
+    > button:first-of-type {
+      grid-area: create;
+      width: auto !important;
+      margin: 0 !important;
+      white-space: nowrap;
+    }
+
+    > p {
+      grid-area: history;
+      align-self: center;
+      margin: 0;
+    }
+
+    > div {
+      grid-area: list;
+      display: flex;
+      gap: 10px;
+      width: 100%;
+      flex: 0 0 auto;
+      overflow-x: auto;
+      overflow-y: hidden;
+    }
+
+    > div > div {
+      flex: 0 0 205px;
+      min-width: 0;
+      padding: 7px 2px;
+    }
+
+    > button:last-of-type {
+      grid-area: theme;
+      justify-self: end;
+      margin: 0 !important;
+      white-space: nowrap;
+    }
+  }
 `;
 
 const Logo = styled.a`
@@ -136,6 +199,7 @@ const HardButton = styled.button`
 // with an inset legend chip. Every panel in the app reuses this.
 const Panel = styled.fieldset`
   display: block;
+  min-width: 0;
   background: var(--color-surface);
   border: 2px solid var(--color-ink);
   box-shadow: 4px 4px 0 0 var(--color-ink);
@@ -167,6 +231,20 @@ const Row = styled.div`
   border-bottom: 2px dotted var(--color-border-dotted);
   font-size: 13px;
   &:last-of-type { border-bottom: none; padding-bottom: 2px; }
+  @media (max-width: 480px) {
+    grid-template-columns: 76px minmax(0, 1fr);
+    gap: 6px;
+    font-size: 12px;
+
+    > :nth-child(3) {
+      grid-column: 2;
+      justify-self: start;
+    }
+
+    > :nth-child(3):empty {
+      display: none;
+    }
+  }
 `;
 
 const RowLabel = styled.span`
@@ -209,6 +287,7 @@ const Badge = styled.span`
 `;
 
 const StatCard = styled.div`
+  min-width: 0;
   background: var(--color-surface);
   border: 2px solid var(--color-ink);
   box-shadow: 3px 3px 0 0 var(--color-ink);
@@ -235,6 +314,12 @@ const Main = styled.main`
   flex: 1;
   overflow-y: auto;
   padding: 32px 40px;
+  @media (max-width: 700px) {
+    width: 100%;
+    min-width: 0;
+    overflow: visible;
+    padding: 18px 14px 24px;
+  }
 `;
 
 const Dropzone = styled.div`
@@ -248,6 +333,13 @@ const Dropzone = styled.div`
   text-align: center;
   cursor: pointer;
   transition: border-color 0.15s ease, background 0.15s ease;
+  @media (max-width: 700px) {
+    box-sizing: border-box;
+    width: 100%;
+    height: min(58vh, 420px);
+    min-height: 260px;
+    padding: 18px;
+  }
 `;
 
 // Unlike Row (fixed 100px label), a URL's anchor text is unbounded in length,
@@ -293,6 +385,26 @@ const HistoryList = styled.div`
   scrollbar-width: none;
   -ms-overflow-style: none;
   &::-webkit-scrollbar { display: none; }
+`;
+
+const AuthGrid = styled.div`
+  display: grid;
+  grid-template-columns: repeat(3, minmax(0, 200px));
+  gap: 10px;
+  margin-bottom: 16px;
+  @media (max-width: 480px) {
+    gap: 6px;
+  }
+`;
+
+const FindingsGrid = styled.div`
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 16px;
+  align-items: start;
+  @media (max-width: 700px) {
+    grid-template-columns: minmax(0, 1fr);
+  }
 `;
 
 /* ---------- App ---------- */
@@ -458,7 +570,7 @@ export default function EmailAnalyzerApp() {
                 </Badge>
               </div>
 
-              <div style={{ display: "grid", gridTemplateColumns: "repeat(3, minmax(0, 200px))", gap: 10, marginBottom: 16 }}>
+              <AuthGrid>
                 {["spf", "dkim", "dmarc"].map((k) => {
                   const v = report.auth[k];
                   const tone = v === "pass" ? "success" : v === "fail" ? "danger" : "warning";
@@ -469,7 +581,7 @@ export default function EmailAnalyzerApp() {
                     </StatCard>
                   );
                 })}
-              </div>
+              </AuthGrid>
 
               <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fit, minmax(280px, 1fr))", gap: 16, alignItems: "start" }}>
                 <Panel>
@@ -552,7 +664,7 @@ export default function EmailAnalyzerApp() {
                 )}
               </div>
 
-              <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 16, alignItems: "start" }}>
+              <FindingsGrid>
                 {report.urls?.length > 0 && (
                   <Panel>
                     <Legend>Links found</Legend>
@@ -614,7 +726,7 @@ export default function EmailAnalyzerApp() {
                     ))}
                   </Panel>
                 )}
-              </div>
+              </FindingsGrid>
             </div>
           )}
         </Main>
