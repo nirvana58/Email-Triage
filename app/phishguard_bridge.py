@@ -1,8 +1,11 @@
 """Bridge email analysis to PhishGuard's asynchronous scan APIs."""
 import asyncio
+import logging
 import os
 
 import httpx
+
+logger = logging.getLogger(__name__)
 
 PHISHGUARD_BASE_URL = os.environ.get("PHISHGUARD_BASE_URL", "http://localhost:8001").rstrip("/")
 PHISHGUARD_SCAN_PATH = "/scan"
@@ -41,6 +44,10 @@ async def get_phishguard_pdf_report(urls: list[str]) -> dict:
         else {"urls": urls, "use_llm": PHISHGUARD_USE_LLM}
     )
     id_key = "scan_id" if is_single_scan else "batch_id"
+    logger.info(
+        "Submitting %s PhishGuard scan(s); use_llm=%s",
+        len(urls), PHISHGUARD_USE_LLM,
+    )
 
     try:
         async with httpx.AsyncClient(timeout=PHISHGUARD_REQUEST_TIMEOUT) as client:
@@ -49,20 +56,27 @@ async def get_phishguard_pdf_report(urls: list[str]) -> dict:
                 json=submit_payload,
             )
             if response.status_code != 200:
+                logger.warning("PhishGuard submit returned HTTP %s", response.status_code)
                 return {"status": "error", "pdf_bytes": None}
 
             job_id = response.json().get(id_key)
             if not job_id:
+                logger.warning("PhishGuard submit response did not contain %s", id_key)
                 return {"status": "error", "pdf_bytes": None}
 
             status_url = f"{PHISHGUARD_BASE_URL}{submit_path}/{job_id}"
             while asyncio.get_running_loop().time() < deadline:
                 status_response = await client.get(status_url)
                 if status_response.status_code != 200:
+                    logger.warning(
+                        "PhishGuard status poll returned HTTP %s",
+                        status_response.status_code,
+                    )
                     return {"status": "error", "pdf_bytes": None}
 
                 batch_status = status_response.json().get("status")
                 if batch_status in {"failed", "cancelled"}:
+                    logger.warning("PhishGuard job ended with status %s", batch_status)
                     return {"status": "error", "pdf_bytes": None}
                 if batch_status == "completed":
                     break
@@ -72,6 +86,7 @@ async def get_phishguard_pdf_report(urls: list[str]) -> dict:
                     max(0, deadline - asyncio.get_running_loop().time()),
                 ))
             else:
+                logger.warning("Timed out waiting for PhishGuard scan completion")
                 return {"status": "error", "pdf_bytes": None}
 
             report_url = f"{status_url}/report"
@@ -81,8 +96,13 @@ async def get_phishguard_pdf_report(urls: list[str]) -> dict:
                     pdf_bytes = report_response.content
                     if pdf_bytes.startswith(b"%PDF-"):
                         return {"status": "success", "pdf_bytes": pdf_bytes}
+                    logger.warning("PhishGuard report endpoint returned non-PDF content")
                     return {"status": "error", "pdf_bytes": None}
                 if report_response.status_code != 404:
+                    logger.warning(
+                        "PhishGuard report download returned HTTP %s",
+                        report_response.status_code,
+                    )
                     return {"status": "error", "pdf_bytes": None}
 
                 await asyncio.sleep(min(
@@ -90,8 +110,11 @@ async def get_phishguard_pdf_report(urls: list[str]) -> dict:
                     max(0, deadline - asyncio.get_running_loop().time()),
                 ))
 
+        logger.warning("Timed out waiting for the PhishGuard PDF report")
         return {"status": "error", "pdf_bytes": None}
     except httpx.ConnectError:
+        logger.exception("Could not connect to PhishGuard")
         return {"status": "unreachable", "pdf_bytes": None}
     except Exception:
+        logger.exception("Unexpected error while requesting the PhishGuard report")
         return {"status": "error", "pdf_bytes": None}
