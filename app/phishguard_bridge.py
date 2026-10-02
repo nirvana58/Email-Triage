@@ -7,6 +7,9 @@ import httpx
 PHISHGUARD_BASE_URL = os.environ.get("PHISHGUARD_BASE_URL", "http://localhost:8001").rstrip("/")
 PHISHGUARD_SCAN_PATH = "/scan"
 PHISHGUARD_BATCH_PATH = "/batch"
+PHISHGUARD_USE_LLM = os.environ.get("PHISHGUARD_USE_LLM", "false").strip().lower() in {
+    "1", "true", "yes", "on",
+}
 PHISHGUARD_TIMEOUT = float(os.environ.get("PHISHGUARD_TIMEOUT", "300"))
 PHISHGUARD_POLL_INTERVAL = float(os.environ.get("PHISHGUARD_POLL_INTERVAL", "1"))
 PHISHGUARD_REQUEST_TIMEOUT = 15.0
@@ -32,7 +35,11 @@ async def get_phishguard_pdf_report(urls: list[str]) -> dict:
     deadline = asyncio.get_running_loop().time() + PHISHGUARD_TIMEOUT
     is_single_scan = len(urls) == 1
     submit_path = PHISHGUARD_SCAN_PATH if is_single_scan else PHISHGUARD_BATCH_PATH
-    submit_payload = {"url": urls[0]} if is_single_scan else {"urls": urls}
+    submit_payload = (
+        {"url": urls[0], "use_llm": PHISHGUARD_USE_LLM}
+        if is_single_scan
+        else {"urls": urls, "use_llm": PHISHGUARD_USE_LLM}
+    )
     id_key = "scan_id" if is_single_scan else "batch_id"
 
     try:
