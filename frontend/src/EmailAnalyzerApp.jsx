@@ -518,6 +518,11 @@ export default function EmailAnalyzerApp() {
     event.preventDefault();
     setAuthBusy(true);
     setAuthError("");
+    if (!API_BASE_URL) {
+      setAuthError("VITE_API_URL is missing from the Vercel frontend build. Set it to the Railway API URL, then redeploy Vercel.");
+      setAuthBusy(false);
+      return;
+    }
     const form = new FormData(event.currentTarget);
     const credentials = {
       username: form.get("username"),
@@ -539,7 +544,9 @@ export default function EmailAnalyzerApp() {
       setReport(null);
       setAuthError("");
     } catch (error) {
-      setAuthError(error.message || "Authentication failed.");
+      setAuthError(error instanceof TypeError
+        ? "Could not reach the API. Check VITE_API_URL and the Railway service's CORS allowlist, then redeploy."
+        : error.message || "Authentication failed.");
     } finally {
       setAuthBusy(false);
     }
