@@ -678,7 +678,7 @@ export default function EmailAnalyzerApp() {
                         <UrlDestinationLine>
                           <span style={{
                             flex: "1 1 auto", minWidth: 0, overflowWrap: "anywhere", wordBreak: "break-word",
-                            color: u.mismatch || u.urlhaus_flagged ? "var(--color-danger)" : "var(--color-ink)",
+                            color: u.mismatch || u.urlhaus_flagged || u.sandbox?.risk_detected ? "var(--color-danger)" : "var(--color-ink)",
                           }}>
                             &rarr; {u.actual_href}
                           </span>
@@ -697,6 +697,25 @@ export default function EmailAnalyzerApp() {
                             )}
                           </span>
                         </UrlDestinationLine>
+                        {u.sandbox && (
+                          <div style={{ marginTop: 5, fontSize: 12 }}>
+                            <Badge $tone={u.sandbox.risk_detected ? "danger" : u.sandbox.available ? "success" : "warning"}>
+                              {u.sandbox.status === "complete"
+                                ? u.sandbox.risk_detected ? "Sandbox flagged" : "Sandbox clean"
+                                : u.sandbox.status === "unavailable" ? "Sandbox unavailable" : "Sandbox skipped"}
+                            </Badge>
+                            {u.sandbox.risk_signals?.length > 0 && (
+                              <div style={{ color: "var(--color-danger)", marginTop: 5, overflowWrap: "anywhere" }}>
+                                {u.sandbox.risk_signals.join(" · ")}
+                              </div>
+                            )}
+                            {!u.sandbox.available && u.sandbox.reason && (
+                              <div style={{ color: "var(--color-ink-soft)", marginTop: 5, overflowWrap: "anywhere" }}>
+                                {u.sandbox.reason}
+                              </div>
+                            )}
+                          </div>
+                        )}
                       </UrlRow>
                       );
                     })}

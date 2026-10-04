@@ -6,6 +6,7 @@ API surface:
 """
 import tempfile
 import os
+import json
 from pathlib import Path
 
 from dotenv import load_dotenv
@@ -14,10 +15,10 @@ load_dotenv()  # picks up ABUSECH_AUTH_KEY from a .env file in the project root
 
 from fastapi import FastAPI, UploadFile, File, HTTPException, Response
 from fastapi.middleware.cors import CORSMiddleware
-from sqlalchemy import create_engine
+from sqlalchemy import create_engine, inspect, text
 from sqlalchemy.orm import sessionmaker
 
-from . import parser, threat_intel, phishguard_bridge
+from . import parser, threat_intel, phishguard_bridge, sandbox_bridge
 from .models import Base, Analysis, ExtractedUrl, ExtractedAttachment, ReceivedHop
 
 DATABASE_URL = os.getenv("DATABASE_URL")
@@ -36,6 +37,10 @@ if DATABASE_URL.startswith("sqlite:"):
 engine = create_engine(DATABASE_URL, **engine_options)
 SessionLocal = sessionmaker(bind=engine)
 Base.metadata.create_all(engine)
+with engine.begin() as connection:
+    analysis_columns = {column["name"] for column in inspect(engine).get_columns("analyses")}
+    if "sandbox_results" not in analysis_columns:
+        connection.execute(text("ALTER TABLE analyses ADD COLUMN sandbox_results TEXT"))
 print(f"Database schema ready ({engine.dialect.name}).")
 
 app = FastAPI(title="Phishing Email Analyzer")
@@ -79,6 +84,7 @@ async def analyze_email(file: UploadFile = File(...)):
     # raises, so a PhishGuard outage doesn't break email triage itself.
     all_urls = [u["actual_href"] for u in parsed["urls"] if u.get("actual_href")]
     phishguard_result = await phishguard_bridge.get_phishguard_pdf_report(all_urls)
+    sandbox_results = await sandbox_bridge.scan_extracted_urls(parsed["urls"])
 
     flag_count = sum([
         parsed["from_reply_to_mismatch"],
@@ -92,6 +98,7 @@ async def analyze_email(file: UploadFile = File(...)):
         any(a["virustotal_flagged"] for a in parsed["attachments"]),
         parsed["sender_domain_age_days"] is not None and parsed["sender_domain_age_days"] < 30,
         parsed["ip_reputation_flagged"],
+        any(result.get("risk_detected") for result in sandbox_results.values()),
     ])
 
     db = SessionLocal()
@@ -115,6 +122,7 @@ async def analyze_email(file: UploadFile = File(...)):
             flag_count=flag_count,
             phishguard_status=phishguard_result["status"],
             phishguard_pdf=phishguard_result["pdf_bytes"],
+            sandbox_results=json.dumps(sandbox_results),
         )
         db.add(analysis)
         db.flush()  # get analysis.id before adding children
@@ -182,6 +190,11 @@ def get_phishguard_report(analysis_id: int):
 
 
 def _serialize_analysis(analysis: Analysis) -> dict:
+    try:
+        sandbox_results = json.loads(analysis.sandbox_results or "{}")
+    except (TypeError, json.JSONDecodeError):
+        sandbox_results = {}
+
     return {
         "id": analysis.id,
         "filename": analysis.uploaded_filename,
@@ -213,7 +226,8 @@ def _serialize_analysis(analysis: Analysis) -> dict:
             {"anchor_text": u.anchor_text, "actual_href": u.actual_href,
              "mismatch": u.anchor_href_mismatch, "domain_age_days": u.domain_age_days,
              "urlhaus_flagged": u.urlhaus_flagged, "urlhaus_tags": u.urlhaus_tags,
-             "urlhaus_host_flagged": u.urlhaus_host_flagged, "urlhaus_host_url_count": u.urlhaus_host_url_count}
+             "urlhaus_host_flagged": u.urlhaus_host_flagged, "urlhaus_host_url_count": u.urlhaus_host_url_count,
+             "sandbox": sandbox_results.get(u.actual_href)}
             for u in analysis.urls
         ],
         "attachments": [

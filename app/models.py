@@ -50,6 +50,7 @@ class Analysis(Base):
     # PhishGuard bridge — PDF report covering every link found in this email
     phishguard_status = Column(String, nullable=True)     # success / no_urls / unreachable / error
     phishguard_pdf = Column(LargeBinary, nullable=True)
+    sandbox_results = Column(Text, nullable=True)         # JSON map of URL to remote browser findings
 
     urls = relationship("ExtractedUrl", back_populates="analysis", cascade="all, delete-orphan")
     attachments = relationship("ExtractedAttachment", back_populates="analysis", cascade="all, delete-orphan")

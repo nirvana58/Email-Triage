@@ -39,6 +39,10 @@ Two-service design, connected by a bridge layer:
 | Variable | Used by | Purpose |
 |---|---|---|
 | `PHISHGUARD_BASE_URL` | Backend | Must point to PhishGuard's live service root — not `localhost`, and not a partial path like `/scan` appended incorrectly. Integration is sensitive to base URL format and trailing slashes. |
+| `SANDBOX_SERVICE_URL` | Backend | Root URL of the Render-hosted sandbox service. When set with `SANDBOX_API_TOKEN`, extracted HTTP(S) links are detonated and findings are stored with the analysis. |
+| `SANDBOX_API_TOKEN` | Backend | Bearer token configured on the sandbox service. Keep it in Railway's backend environment settings, never in the Vercel frontend. |
+| `SANDBOX_MAX_URLS` | Backend | Maximum unique HTTP(S) links submitted per email (default: `3`). |
+| `SANDBOX_REQUEST_TIMEOUT` | Backend | Per-request timeout in seconds (default: `180`). |
 | `LLM_PROVIDER`, `GEMINI_API_KEY` | PhishGuard (URL-content analysis) | Optional AI-based content review during scanning |
 | `REPORT_LLM_PROVIDER`, `LLM_PROVIDER`, `GEMINI_MODEL` | PhishGuard (report generation) | Separate LLM config for report summarization — distinct from the scanning flow above; don't conflate the two |
 | `VITE_API_URL` | Frontend (build-time) | Public API host the deployed frontend calls. If missing/malformed, requests silently go to the wrong host or a broken relative path. |
