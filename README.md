@@ -43,12 +43,16 @@ Two-service design, connected by a bridge layer:
 | `SANDBOX_API_TOKEN` | Backend | Bearer token configured on the sandbox service. Keep it in Railway's backend environment settings, never in the Vercel frontend. |
 | `SANDBOX_MAX_URLS` | Backend | Maximum unique HTTP(S) links submitted per email (default: `3`). |
 | `SANDBOX_REQUEST_TIMEOUT` | Backend | Per-request timeout in seconds (default: `180`). |
+| `JWT_SECRET_KEY` | Backend | Required, private signing secret for account access tokens. Generate a long random value and keep it stable across backend restarts. |
+| `JWT_ACCESS_TOKEN_MINUTES` | Backend | Access-token lifetime in minutes (default: `720`). |
 | `LLM_PROVIDER`, `GEMINI_API_KEY` | PhishGuard (URL-content analysis) | Optional AI-based content review during scanning |
 | `REPORT_LLM_PROVIDER`, `LLM_PROVIDER`, `GEMINI_MODEL` | PhishGuard (report generation) | Separate LLM config for report summarization — distinct from the scanning flow above; don't conflate the two |
 | `VITE_API_URL` | Frontend (build-time) | Public API host the deployed frontend calls. If missing/malformed, requests silently go to the wrong host or a broken relative path. |
 | Postgres connection vars | Backend | Production database linkage on Railway |
 
 > **Note:** AI enrichment can fail silently if the wrong key/model is configured while the underlying scan still succeeds — check logs, not just scan success, when verifying LLM features.
+
+Accounts are created with `POST /auth/register` and authenticate with `POST /auth/login`. Both return a bearer JWT. The frontend keeps it for the current browser session; analyses created before account ownership was added remain unassigned and are not included in user history. Configure `JWT_SECRET_KEY` in Railway before starting the backend; generate one with `python -c "import secrets; print(secrets.token_urlsafe(48))"` and use the same value across backend instances.
 
 ## Local development
 

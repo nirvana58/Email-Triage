@@ -14,12 +14,24 @@ from sqlalchemy.orm import relationship, declarative_base
 Base = declarative_base()
 
 
+class User(Base):
+    __tablename__ = "users"
+
+    id = Column(Integer, primary_key=True, index=True)
+    username = Column(String(32), nullable=False, unique=True, index=True)
+    password_hash = Column(Text, nullable=False)
+    created_at = Column(DateTime, default=datetime.utcnow, nullable=False)
+
+    analyses = relationship("Analysis", back_populates="owner")
+
+
 class Analysis(Base):
     __tablename__ = "analyses"
 
     id = Column(Integer, primary_key=True, index=True)
     uploaded_filename = Column(String, nullable=False)
     upload_timestamp = Column(DateTime, default=datetime.utcnow)
+    owner_user_id = Column(Integer, ForeignKey("users.id"), nullable=True, index=True)
     analyst_note = Column(Text, nullable=True)
 
     # Sender identity
@@ -55,6 +67,7 @@ class Analysis(Base):
     urls = relationship("ExtractedUrl", back_populates="analysis", cascade="all, delete-orphan")
     attachments = relationship("ExtractedAttachment", back_populates="analysis", cascade="all, delete-orphan")
     received_hops = relationship("ReceivedHop", back_populates="analysis", cascade="all, delete-orphan")
+    owner = relationship("User", back_populates="analyses")
 
 
 class ExtractedUrl(Base):

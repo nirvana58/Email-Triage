@@ -3,50 +3,52 @@ import styled from "styled-components";
 import GlobalStyle from "./GlobalStyle";
 import TypewriterLoader from "./TypewriterLoader";
 
-const DEMO_REPORT = {
-  id: 1,
-  filename: "invoice_urgent_review.eml",
-  timestamp: "Today, 10:42",
-  flag_count: 7,
-  sender_domain_age_days: 4,
-  phishguard_status: "success",
-  phishguard_report_available: true,
-  routing: {
-    sending_ip: "185.220.101.47",
-    ip_reputation_flagged: true,
-    ip_reputation_score: 87,
-    asn: "AS208294",
-    geolocation: "Amsterdam, NL",
-  },
-  sender: {
-    from: '"IT Support" <it-support@paypa1-secure.com>',
-    reply_to: "billing-support@mail-recovery.net",
-    return_path: "bounce@mail-recovery.net",
-    from_reply_to_mismatch: true,
-    from_return_path_mismatch: true,
-  },
-  auth: { spf: "fail", dkim: "fail", dmarc: "none" },
-  urls: [
-    { anchor_text: "paypal.com/account", actual_href: "secure-paypal-verify.ru", mismatch: true, domain_age_days: 2, urlhaus_flagged: true, urlhaus_tags: "phishing,paypal", urlhaus_host_flagged: true, urlhaus_host_url_count: 14 },
-    { anchor_text: "Unsubscribe", actual_href: "mail-recovery.net/unsub", mismatch: false, domain_age_days: 14, urlhaus_flagged: false, urlhaus_tags: null, urlhaus_host_flagged: false, urlhaus_host_url_count: 0 },
-  ],
-  attachments: [
-    { filename: "invoice.pdf.exe", detected_filetype: "exe/dll (PE)", extension_mismatch: true, sha256: "4f2a...9c1e", malwarebazaar_flagged: true, malware_signature: "TrojanDownloader.Agent", virustotal_flagged: true, virustotal_malicious_count: 41 },
-  ],
-  received_chain: [
-    { hop_order: 0, from_host: "mail-recovery.net", by_host: "relay-04.smtp-out.net", timestamp: "03:14:02 UTC" },
-    { hop_order: 1, from_host: "relay-04.smtp-out.net", by_host: "mx.recipient-domain.com", timestamp: "03:14:05 UTC" },
-  ],
-};
-
-const DEMO_HISTORY = [
-  { id: 1, filename: "invoice_urgent_review.eml", timestamp: "Today, 10:42", flag_count: 5 },
-  { id: 2, filename: "shared_document.msg", timestamp: "Yesterday, 16:05", flag_count: 2 },
-  { id: 3, filename: "quarterly_report.eml", timestamp: "Mon, 09:20", flag_count: 0 },
-];
-
 const API_BASE_URL = (import.meta.env.VITE_API_URL || "").replace(/\/+$/, "");
 const apiUrl = (path) => `${API_BASE_URL}${path}`;
+const TOKEN_STORAGE_KEY = "mail-triage-access-token";
+const USERNAME_STORAGE_KEY = "mail-triage-username";
+
+const AuthPage = styled.main`
+  min-height: 100vh;
+  display: grid;
+  place-items: center;
+  padding: 24px;
+`;
+
+const AuthPanel = styled.form`
+  width: min(100%, 420px);
+  background: var(--color-surface);
+  border: 2px solid var(--color-ink);
+  box-shadow: 5px 5px 0 var(--color-ink);
+  padding: 24px;
+`;
+
+const AuthInput = styled.input`
+  box-sizing: border-box;
+  width: 100%;
+  margin: 6px 0 14px;
+  padding: 10px;
+  border: 2px solid var(--color-ink);
+  background: var(--color-bone);
+  color: var(--color-ink);
+  font: inherit;
+`;
+
+const AccountBar = styled.div`
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 8px;
+  margin: auto 0 12px;
+  min-width: 0;
+  font-size: 12px;
+  font-weight: 700;
+  overflow-wrap: anywhere;
+  @media (max-width: 700px) {
+    grid-area: account;
+    margin: 0;
+  }
+`;
 
 const toneColor = (tone) =>
   tone === "danger" ? "var(--color-danger)" : tone === "warning" ? "var(--color-warning)" : "var(--color-success)";
@@ -99,7 +101,8 @@ const Sidebar = styled.aside`
     grid-template-columns: minmax(0, 1fr) auto;
     grid-template-areas:
       "brand create"
-      "history theme"
+      "account theme"
+      "history history"
       "list list";
     gap: 8px 12px;
     width: 100%;
@@ -127,7 +130,7 @@ const Sidebar = styled.aside`
       margin: 0;
     }
 
-    > div {
+    > div[data-history-list] {
       grid-area: list;
       display: flex;
       gap: 10px;
@@ -137,7 +140,7 @@ const Sidebar = styled.aside`
       overflow-y: hidden;
     }
 
-    > div > div {
+    > div[data-history-list] > div {
       flex: 0 0 205px;
       min-width: 0;
       padding: 7px 2px;
@@ -424,8 +427,32 @@ export default function EmailAnalyzerApp() {
   const [report, setReport] = useState(null);
   const [dragOver, setDragOver] = useState(false);
   const [loading, setLoading] = useState(false);
-  const [history, setHistory] = useState(DEMO_HISTORY);
-  const [historyIsDemo, setHistoryIsDemo] = useState(true);
+  const [history, setHistory] = useState([]);
+  const [token, setToken] = useState(() => sessionStorage.getItem(TOKEN_STORAGE_KEY) || "");
+  const [username, setUsername] = useState(() => sessionStorage.getItem(USERNAME_STORAGE_KEY) || "");
+  const [authMode, setAuthMode] = useState("login");
+  const [authBusy, setAuthBusy] = useState(false);
+  const [authError, setAuthError] = useState("");
+  const [requestError, setRequestError] = useState("");
+  const [screenshotPreviews, setScreenshotPreviews] = useState({ reportId: null, urls: {} });
+
+  const requestApi = useCallback(async (path, options = {}) => {
+    const activeToken = sessionStorage.getItem(TOKEN_STORAGE_KEY);
+    const response = await fetch(apiUrl(path), {
+      ...options,
+      headers: {
+        ...options.headers,
+        ...(activeToken ? { Authorization: `Bearer ${activeToken}` } : {}),
+      },
+    });
+    if (response.status === 401) {
+      sessionStorage.removeItem(TOKEN_STORAGE_KEY);
+      sessionStorage.removeItem(USERNAME_STORAGE_KEY);
+      setToken("");
+      setUsername("");
+    }
+    return response;
+  }, []);
 
   // data-theme must live on <html>, not a div below <body> — GlobalStyle sets
   // `color` on body itself, and CSS inheritance resolves that against
@@ -437,54 +464,190 @@ export default function EmailAnalyzerApp() {
 
   const refreshHistory = useCallback(async () => {
     try {
-      const res = await fetch(apiUrl("/analyses"));
+      const res = await requestApi("/analyses");
       if (!res.ok) throw new Error("backend unavailable");
       const data = await res.json();
       setHistory(data);
-      setHistoryIsDemo(false);
-    } catch {
-      // Backend not running — keep showing demo rows so the sidebar isn't empty.
-      setHistory(DEMO_HISTORY);
-      setHistoryIsDemo(true);
+      setRequestError("");
+    } catch (error) {
+      setHistory([]);
+      setRequestError(error.message || "Could not load your analysis history.");
     }
-  }, []);
+  }, [requestApi]);
 
-  // Load real history on mount, so past analyses show up without needing an upload first.
-  React.useEffect(() => { refreshHistory(); }, [refreshHistory]);
+  const refreshHistoryFromEffect = React.useEffectEvent(() => {
+    refreshHistory();
+  });
+
+  React.useEffect(() => {
+    if (token) queueMicrotask(refreshHistoryFromEffect);
+  }, [token]);
 
   const openHistoryItem = useCallback(async (item) => {
-    if (historyIsDemo) {
-      // No real backend data to fetch — just preview with demo detail.
-      setReport({ ...DEMO_REPORT, ...item });
-      return;
-    }
     try {
-      const res = await fetch(apiUrl(`/analyses/${item.id}`));
+      const res = await requestApi(`/analyses/${item.id}`);
       if (!res.ok) throw new Error("not found");
       const data = await res.json();
       setReport(data);
-    } catch {
-      setReport({ ...DEMO_REPORT, ...item });
+      setRequestError("");
+    } catch (error) {
+      setRequestError(error.message || "Could not load this analysis.");
     }
-  }, [historyIsDemo]);
+  }, [requestApi]);
 
   const handleFile = useCallback(async (file) => {
     if (!file) return;
     setLoading(true);
+    setRequestError("");
     try {
       const form = new FormData();
       form.append("file", file);
-      const res = await fetch(apiUrl("/analyze"), { method: "POST", body: form });
+      const res = await requestApi("/analyze", { method: "POST", body: form });
       if (!res.ok) throw new Error("backend unavailable");
       const data = await res.json();
       setReport(data);
       refreshHistory(); // pick up the newly saved analysis in the sidebar
-    } catch {
-      setReport({ ...DEMO_REPORT, filename: file.name });
+    } catch (error) {
+      setRequestError(error.message || "Could not analyze this email.");
     } finally {
       setLoading(false);
     }
-  }, [refreshHistory]);
+  }, [refreshHistory, requestApi]);
+
+  const submitAuth = useCallback(async (event) => {
+    event.preventDefault();
+    setAuthBusy(true);
+    setAuthError("");
+    const form = new FormData(event.currentTarget);
+    const credentials = {
+      username: form.get("username"),
+      password: form.get("password"),
+    };
+    try {
+      const response = await fetch(apiUrl(`/auth/${authMode === "register" ? "register" : "login"}`), {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify(credentials),
+      });
+      const result = await response.json();
+      if (!response.ok) throw new Error(result.detail || "Authentication failed.");
+      sessionStorage.setItem(TOKEN_STORAGE_KEY, result.access_token);
+      sessionStorage.setItem(USERNAME_STORAGE_KEY, result.username);
+      setToken(result.access_token);
+      setUsername(result.username);
+      setHistory([]);
+      setReport(null);
+      setAuthError("");
+    } catch (error) {
+      setAuthError(error.message || "Authentication failed.");
+    } finally {
+      setAuthBusy(false);
+    }
+  }, [authMode]);
+
+  const signOut = useCallback(() => {
+    sessionStorage.removeItem(TOKEN_STORAGE_KEY);
+    sessionStorage.removeItem(USERNAME_STORAGE_KEY);
+    setToken("");
+    setUsername("");
+    setHistory([]);
+    setReport(null);
+  }, []);
+
+  const downloadProtectedFile = useCallback(async (path, filename) => {
+    try {
+      const response = await requestApi(path);
+      if (!response.ok) throw new Error("Could not download this file.");
+      const objectUrl = URL.createObjectURL(await response.blob());
+      const link = document.createElement("a");
+      link.href = objectUrl;
+      link.download = filename;
+      document.body.appendChild(link);
+      link.click();
+      link.remove();
+      URL.revokeObjectURL(objectUrl);
+    } catch (error) {
+      setRequestError(error.message || "Could not download this file.");
+    }
+  }, [requestApi]);
+
+  React.useEffect(() => {
+    if (!token || !report?.id) {
+      return undefined;
+    }
+
+    let cancelled = false;
+    const objectUrls = [];
+    const screenshotUrls = (report.urls || [])
+      .filter((item) => item.actual_href && item.sandbox?.screenshot_available)
+      .map((item) => item.actual_href);
+
+    Promise.all(screenshotUrls.map(async (url) => {
+      const path = `/analyses/${report.id}/sandbox-screenshot?url=${encodeURIComponent(url)}`;
+      try {
+        const response = await requestApi(path);
+        if (!response.ok) return null;
+        const objectUrl = URL.createObjectURL(await response.blob());
+        objectUrls.push(objectUrl);
+        return [url, objectUrl];
+      } catch {
+        return null;
+      }
+    })).then((entries) => {
+      if (!cancelled) {
+        setScreenshotPreviews({
+          reportId: report.id,
+          urls: Object.fromEntries(entries.filter(Boolean)),
+        });
+      }
+    });
+
+    return () => {
+      cancelled = true;
+      objectUrls.forEach((objectUrl) => URL.revokeObjectURL(objectUrl));
+    };
+  }, [report, requestApi, token]);
+
+  const currentScreenshotPreviews = screenshotPreviews.reportId === report?.id
+    ? screenshotPreviews.urls
+    : {};
+
+  if (!token) {
+    return (
+      <>
+        <GlobalStyle />
+        <AuthPage>
+          <AuthPanel onSubmit={submitAuth}>
+            <Logo href="/" style={{ marginBottom: 24 }}>
+              <LogoMark>M</LogoMark>
+              <span style={{ fontFamily: "var(--font-hud)", fontWeight: 700, fontSize: 14 }}>MAIL TRIAGE</span>
+            </Logo>
+            <h1 style={{ fontFamily: "var(--font-hud)", fontSize: 21, margin: "0 0 8px" }}>
+              {authMode === "login" ? "Sign in" : "Create account"}
+            </h1>
+            <p style={{ color: "var(--color-ink-soft)", fontSize: 13, margin: "0 0 20px" }}>
+              Your email analyses and history are private to your account.
+            </p>
+            <label htmlFor="auth-username">Username</label>
+            <AuthInput id="auth-username" name="username" autoComplete="username" minLength={3} maxLength={32} required />
+            <label htmlFor="auth-password">Password</label>
+            <AuthInput id="auth-password" name="password" type="password" autoComplete={authMode === "login" ? "current-password" : "new-password"} minLength={12} maxLength={128} required />
+            {authError && <p role="alert" style={{ color: "var(--color-danger)", fontSize: 13 }}>{authError}</p>}
+            <HardButton type="submit" disabled={authBusy} style={{ width: "100%", marginTop: 8 }}>
+              {authBusy ? "Please wait..." : authMode === "login" ? "Sign in" : "Create account"}
+            </HardButton>
+            <button
+              type="button"
+              onClick={() => { setAuthError(""); setAuthMode(authMode === "login" ? "register" : "login"); }}
+              style={{ display: "block", margin: "18px auto 0", background: "none", border: 0, color: "var(--color-accent)", font: "inherit", fontWeight: 700, cursor: "pointer" }}
+            >
+              {authMode === "login" ? "Create an account" : "Already registered? Sign in"}
+            </button>
+          </AuthPanel>
+        </AuthPage>
+      </>
+    );
+  }
 
   return (
     <>
@@ -501,7 +664,7 @@ export default function EmailAnalyzerApp() {
           </HardButton>
 
           <Legend as="p" style={{ display: "inline-block" }}>History</Legend>
-          <HistoryList>
+          <HistoryList data-history-list>
             {history.map((item) => (
               <HistoryRow key={item.id} $active={report?.id === item.id} onClick={() => openHistoryItem(item)}>
                 <div style={{ minWidth: 0 }}>
@@ -513,6 +676,13 @@ export default function EmailAnalyzerApp() {
             ))}
           </HistoryList>
 
+          <AccountBar>
+            <span title={username}>{username}</span>
+            <HardButton $variant="ghost" onClick={signOut} style={{ padding: "6px 8px", fontSize: 11 }}>
+              Sign out
+            </HardButton>
+          </AccountBar>
+
           <HardButton $variant="ghost" onClick={() => setTheme(theme === "light" ? "dark" : "light")} style={{ marginTop: 12 }}>
             {theme === "light" ? "Dark mode" : "Light mode"}
           </HardButton>
@@ -520,6 +690,11 @@ export default function EmailAnalyzerApp() {
         </Sidebar>
 
         <Main>
+          {requestError && (
+            <p role="alert" style={{ color: "var(--color-danger)", margin: "0 0 14px", overflowWrap: "anywhere" }}>
+              {requestError}
+            </p>
+          )}
           {!report && (
             <Dropzone
               $active={dragOver}
@@ -550,15 +725,16 @@ export default function EmailAnalyzerApp() {
                     <Row>
                       <RowLabel>Status</RowLabel>
                       <RowValue>Report generated for every link found in this email</RowValue>
-                      <a
-                        href={apiUrl(`/analyses/${report.id}/phishguard-report`)}
-                        download
-                        style={{ textDecoration: "none" }}
+                      <HardButton
+                        type="button"
+                        onClick={() => downloadProtectedFile(
+                          `/analyses/${report.id}/phishguard-report`,
+                          `phishguard-report-${report.id}.pdf`,
+                        )}
+                        style={{ fontSize: 11, padding: "6px 10px" }}
                       >
-                        <HardButton as="span" style={{ fontSize: 11, padding: "6px 10px" }}>
-                          Download PDF
-                        </HardButton>
-                      </a>
+                        Download PDF
+                      </HardButton>
                     </Row>
                   ) : (
                     <Row>
@@ -726,26 +902,31 @@ export default function EmailAnalyzerApp() {
                             )}
                             {u.sandbox.screenshot_available && (
                               <div style={{ marginTop: 8 }}>
-                                <a
-                                  href={apiUrl(`/analyses/${report.id}/sandbox-screenshot?url=${encodeURIComponent(u.actual_href)}`)}
-                                  target="_blank"
-                                  rel="noreferrer"
-                                  aria-label={`Open screenshot preview for ${u.actual_href}`}
+                                {currentScreenshotPreviews[u.actual_href] ? (
+                                  <a
+                                    href={currentScreenshotPreviews[u.actual_href]}
+                                    target="_blank"
+                                    rel="noreferrer"
+                                    aria-label={`Open screenshot preview for ${u.actual_href}`}
+                                  >
+                                    <SandboxScreenshot
+                                      src={currentScreenshotPreviews[u.actual_href]}
+                                      alt={`Rendered page screenshot for ${u.actual_href}`}
+                                    />
+                                  </a>
+                                ) : (
+                                  <div style={{ color: "var(--color-ink-soft)" }}>Loading screenshot preview...</div>
+                                )}
+                                <HardButton
+                                  type="button"
+                                  onClick={() => downloadProtectedFile(
+                                    `/analyses/${report.id}/sandbox-screenshot?url=${encodeURIComponent(u.actual_href)}`,
+                                    `sandbox-screenshot-${report.id}.png`,
+                                  )}
+                                  style={{ fontSize: 11, padding: "6px 10px", marginTop: 6 }}
                                 >
-                                  <SandboxScreenshot
-                                    src={apiUrl(`/analyses/${report.id}/sandbox-screenshot?url=${encodeURIComponent(u.actual_href)}`)}
-                                    alt={`Rendered page screenshot for ${u.actual_href}`}
-                                    loading="lazy"
-                                  />
-                                </a>
-                                <a
-                                  href={apiUrl(`/analyses/${report.id}/sandbox-screenshot?url=${encodeURIComponent(u.actual_href)}&download=true`)}
-                                  style={{ display: "inline-block", marginTop: 5, color: "var(--color-accent)", fontWeight: 700 }}
-                                >
-                                  <HardButton as="span" style={{ fontSize: 11, padding: "6px 10px" }}>
-                          Download Image
-                        </HardButton>
-                                </a>
+                                  Download Image
+                                </HardButton>
                               </div>
                             )}
                           </div>

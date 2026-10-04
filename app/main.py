@@ -15,13 +15,18 @@ from dotenv import load_dotenv
 
 load_dotenv()  # picks up ABUSECH_AUTH_KEY from a .env file in the project root
 
-from fastapi import FastAPI, UploadFile, File, HTTPException, Response
+from fastapi import FastAPI, UploadFile, File, HTTPException, Response, Depends
 from fastapi.middleware.cors import CORSMiddleware
+from fastapi.security import HTTPAuthorizationCredentials, HTTPBearer
+from pydantic import BaseModel, Field
 from sqlalchemy import create_engine, inspect, text
-from sqlalchemy.orm import sessionmaker
+from sqlalchemy.exc import IntegrityError
+from sqlalchemy.orm import Session, sessionmaker
 
 from . import parser, threat_intel, phishguard_bridge, sandbox_bridge
-from .models import Base, Analysis, ExtractedUrl, ExtractedAttachment, ReceivedHop
+from .models import Base, Analysis, ExtractedUrl, ExtractedAttachment, ReceivedHop, User
+from .security import create_access_token, decode_access_token, hash_password, verify_password
+import jwt
 
 DATABASE_URL = os.getenv("DATABASE_URL")
 if not DATABASE_URL and os.getenv("RAILWAY_ENVIRONMENT"):
@@ -43,9 +48,84 @@ with engine.begin() as connection:
     analysis_columns = {column["name"] for column in inspect(engine).get_columns("analyses")}
     if "sandbox_results" not in analysis_columns:
         connection.execute(text("ALTER TABLE analyses ADD COLUMN sandbox_results TEXT"))
+    if "owner_user_id" not in analysis_columns:
+        connection.execute(text("ALTER TABLE analyses ADD COLUMN owner_user_id INTEGER REFERENCES users(id)"))
+    connection.execute(text(
+        "CREATE INDEX IF NOT EXISTS ix_analyses_owner_user_id ON analyses (owner_user_id)"
+    ))
 print(f"Database schema ready ({engine.dialect.name}).")
 
 app = FastAPI(title="Phishing Email Analyzer")
+bearer_scheme = HTTPBearer(auto_error=False)
+
+
+class Credentials(BaseModel):
+    username: str = Field(min_length=3, max_length=32, pattern=r"^[A-Za-z0-9_.-]+$")
+    password: str = Field(min_length=12, max_length=128)
+
+
+def get_db():
+    db = SessionLocal()
+    try:
+        yield db
+    finally:
+        db.close()
+
+
+def get_current_user(
+    credentials: HTTPAuthorizationCredentials | None = Depends(bearer_scheme),
+    db: Session = Depends(get_db),
+) -> User:
+    unauthorized = HTTPException(
+        status_code=401,
+        detail="Authentication required",
+        headers={"WWW-Authenticate": "Bearer"},
+    )
+    if credentials is None or credentials.scheme.lower() != "bearer":
+        raise unauthorized
+    try:
+        payload = decode_access_token(credentials.credentials)
+        user_id = int(payload["sub"])
+    except (jwt.PyJWTError, KeyError, TypeError, ValueError):
+        raise unauthorized
+    user = db.get(User, user_id)
+    if user is None:
+        raise unauthorized
+    return user
+
+
+@app.post("/auth/register")
+def register(credentials: Credentials, db: Session = Depends(get_db)) -> dict:
+    username = credentials.username.lower()
+    if db.query(User).filter(User.username == username).first():
+        raise HTTPException(status_code=409, detail="Username is already registered")
+
+    user = User(username=username, password_hash=hash_password(credentials.password))
+    db.add(user)
+    try:
+        db.commit()
+    except IntegrityError:
+        db.rollback()
+        raise HTTPException(status_code=409, detail="Username is already registered")
+    db.refresh(user)
+    return {
+        "access_token": create_access_token(user.id),
+        "token_type": "bearer",
+        "username": user.username,
+    }
+
+
+@app.post("/auth/login")
+def login(credentials: Credentials, db: Session = Depends(get_db)) -> dict:
+    username = credentials.username.lower()
+    user = db.query(User).filter(User.username == username).first()
+    if user is None or not verify_password(credentials.password, user.password_hash):
+        raise HTTPException(status_code=401, detail="Invalid username or password")
+    return {
+        "access_token": create_access_token(user.id),
+        "token_type": "bearer",
+        "username": user.username,
+    }
 
 # Loosen for local dev with a separate React frontend; tighten before deploying.
 app.add_middleware(
@@ -62,7 +142,10 @@ app.add_middleware(
 
 
 @app.post("/analyze")
-async def analyze_email(file: UploadFile = File(...)):
+async def analyze_email(
+    file: UploadFile = File(...),
+    current_user: User = Depends(get_current_user),
+):
     raw_bytes = await file.read()
     suffix = Path(file.filename).suffix.lower()
 
@@ -107,6 +190,7 @@ async def analyze_email(file: UploadFile = File(...)):
     try:
         analysis = Analysis(
             uploaded_filename=file.filename,
+            owner_user_id=current_user.id,
             sender_from=parsed["sender_from"],
             sender_reply_to=parsed["sender_reply_to"],
             sender_return_path=parsed["sender_return_path"],
@@ -144,10 +228,12 @@ async def analyze_email(file: UploadFile = File(...)):
 
 
 @app.get("/analyses")
-def list_analyses():
+def list_analyses(current_user: User = Depends(get_current_user)):
     db = SessionLocal()
     try:
-        rows = db.query(Analysis).order_by(Analysis.upload_timestamp.desc()).all()
+        rows = db.query(Analysis).filter(
+            Analysis.owner_user_id == current_user.id
+        ).order_by(Analysis.upload_timestamp.desc()).all()
         return [
             {
                 "id": r.id,
@@ -162,10 +248,13 @@ def list_analyses():
 
 
 @app.get("/analyses/{analysis_id}")
-def get_analysis(analysis_id: int):
+def get_analysis(analysis_id: int, current_user: User = Depends(get_current_user)):
     db = SessionLocal()
     try:
-        analysis = db.query(Analysis).get(analysis_id)
+        analysis = db.query(Analysis).filter(
+            Analysis.id == analysis_id,
+            Analysis.owner_user_id == current_user.id,
+        ).first()
         if not analysis:
             raise HTTPException(404, detail="Analysis not found")
         return _serialize_analysis(analysis)
@@ -174,10 +263,13 @@ def get_analysis(analysis_id: int):
 
 
 @app.get("/analyses/{analysis_id}/phishguard-report")
-def get_phishguard_report(analysis_id: int):
+def get_phishguard_report(analysis_id: int, current_user: User = Depends(get_current_user)):
     db = SessionLocal()
     try:
-        analysis = db.query(Analysis).get(analysis_id)
+        analysis = db.query(Analysis).filter(
+            Analysis.id == analysis_id,
+            Analysis.owner_user_id == current_user.id,
+        ).first()
         if not analysis:
             raise HTTPException(404, detail="Analysis not found")
         if not analysis.phishguard_pdf:
@@ -192,10 +284,18 @@ def get_phishguard_report(analysis_id: int):
 
 
 @app.get("/analyses/{analysis_id}/sandbox-screenshot")
-def get_sandbox_screenshot(analysis_id: int, url: str, download: bool = False):
+def get_sandbox_screenshot(
+    analysis_id: int,
+    url: str,
+    download: bool = False,
+    current_user: User = Depends(get_current_user),
+):
     db = SessionLocal()
     try:
-        analysis = db.query(Analysis).get(analysis_id)
+        analysis = db.query(Analysis).filter(
+            Analysis.id == analysis_id,
+            Analysis.owner_user_id == current_user.id,
+        ).first()
         if not analysis:
             raise HTTPException(404, detail="Analysis not found")
 
