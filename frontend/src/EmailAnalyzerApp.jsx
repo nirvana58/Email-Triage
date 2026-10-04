@@ -742,7 +742,9 @@ export default function EmailAnalyzerApp() {
                                   href={apiUrl(`/analyses/${report.id}/sandbox-screenshot?url=${encodeURIComponent(u.actual_href)}&download=true`)}
                                   style={{ display: "inline-block", marginTop: 5, color: "var(--color-accent)", fontWeight: 700 }}
                                 >
-                                  Download screenshot
+                                  <HardButton as="span" style={{ fontSize: 11, padding: "6px 10px" }}>
+                          Download PDF
+                        </HardButton>
                                 </a>
                               </div>
                             )}
