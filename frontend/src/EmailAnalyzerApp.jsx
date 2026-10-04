@@ -743,7 +743,7 @@ export default function EmailAnalyzerApp() {
                                   style={{ display: "inline-block", marginTop: 5, color: "var(--color-accent)", fontWeight: 700 }}
                                 >
                                   <HardButton as="span" style={{ fontSize: 11, padding: "6px 10px" }}>
-                          Download PDF
+                          Download Image
                         </HardButton>
                                 </a>
                               </div>
