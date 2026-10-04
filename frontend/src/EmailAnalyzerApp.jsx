@@ -360,6 +360,16 @@ const UrlAnchorText = styled.div`
   margin-bottom: 3px;
 `;
 
+const SandboxScreenshot = styled.img`
+  display: block;
+  width: min(100%, 360px);
+  max-height: 220px;
+  object-fit: contain;
+  object-position: left top;
+  border: 1px solid var(--color-border-dotted);
+  background: var(--color-surface);
+`;
+
 const UrlDestinationLine = styled.div`
   display: flex;
   align-items: baseline;
@@ -712,6 +722,28 @@ export default function EmailAnalyzerApp() {
                             {!u.sandbox.available && u.sandbox.reason && (
                               <div style={{ color: "var(--color-ink-soft)", marginTop: 5, overflowWrap: "anywhere" }}>
                                 {u.sandbox.reason}
+                              </div>
+                            )}
+                            {u.sandbox.screenshot_available && (
+                              <div style={{ marginTop: 8 }}>
+                                <a
+                                  href={apiUrl(`/analyses/${report.id}/sandbox-screenshot?url=${encodeURIComponent(u.actual_href)}`)}
+                                  target="_blank"
+                                  rel="noreferrer"
+                                  aria-label={`Open screenshot preview for ${u.actual_href}`}
+                                >
+                                  <SandboxScreenshot
+                                    src={apiUrl(`/analyses/${report.id}/sandbox-screenshot?url=${encodeURIComponent(u.actual_href)}`)}
+                                    alt={`Rendered page screenshot for ${u.actual_href}`}
+                                    loading="lazy"
+                                  />
+                                </a>
+                                <a
+                                  href={apiUrl(`/analyses/${report.id}/sandbox-screenshot?url=${encodeURIComponent(u.actual_href)}&download=true`)}
+                                  style={{ display: "inline-block", marginTop: 5, color: "var(--color-accent)", fontWeight: 700 }}
+                                >
+                                  Download screenshot
+                                </a>
                               </div>
                             )}
                           </div>

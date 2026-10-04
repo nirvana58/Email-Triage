@@ -52,6 +52,7 @@ def _summarize_result(result: dict) -> dict:
         "brand_keywords_found",
         "brand_domain_mismatch",
         "screenshot_available",
+        "screenshot_base64",
     ):
         if key in result:
             summary[key] = result[key]

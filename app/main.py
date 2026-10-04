@@ -7,6 +7,8 @@ API surface:
 import tempfile
 import os
 import json
+import base64
+import binascii
 from pathlib import Path
 
 from dotenv import load_dotenv
@@ -189,11 +191,48 @@ def get_phishguard_report(analysis_id: int):
         db.close()
 
 
-def _serialize_analysis(analysis: Analysis) -> dict:
+@app.get("/analyses/{analysis_id}/sandbox-screenshot")
+def get_sandbox_screenshot(analysis_id: int, url: str, download: bool = False):
+    db = SessionLocal()
     try:
-        sandbox_results = json.loads(analysis.sandbox_results or "{}")
+        analysis = db.query(Analysis).get(analysis_id)
+        if not analysis:
+            raise HTTPException(404, detail="Analysis not found")
+
+        sandbox_results = _load_sandbox_results(analysis)
+        encoded_screenshot = sandbox_results.get(url, {}).get("screenshot_base64")
+        if not encoded_screenshot:
+            raise HTTPException(404, detail="No sandbox screenshot available for this URL")
+        try:
+            screenshot = base64.b64decode(encoded_screenshot, validate=True)
+        except (binascii.Error, ValueError):
+            raise HTTPException(404, detail="Stored sandbox screenshot is invalid")
+
+        disposition = "attachment" if download else "inline"
+        return Response(
+            content=screenshot,
+            media_type="image/png",
+            headers={"Content-Disposition": f'{disposition}; filename="sandbox-screenshot.png"'},
+        )
+    finally:
+        db.close()
+
+
+def _load_sandbox_results(analysis: Analysis) -> dict:
+    try:
+        return json.loads(analysis.sandbox_results or "{}")
     except (TypeError, json.JSONDecodeError):
-        sandbox_results = {}
+        return {}
+
+
+def _public_sandbox_result(result: dict | None) -> dict | None:
+    if not result:
+        return None
+    return {key: value for key, value in result.items() if key != "screenshot_base64"}
+
+
+def _serialize_analysis(analysis: Analysis) -> dict:
+    sandbox_results = _load_sandbox_results(analysis)
 
     return {
         "id": analysis.id,
@@ -227,7 +266,7 @@ def _serialize_analysis(analysis: Analysis) -> dict:
              "mismatch": u.anchor_href_mismatch, "domain_age_days": u.domain_age_days,
              "urlhaus_flagged": u.urlhaus_flagged, "urlhaus_tags": u.urlhaus_tags,
              "urlhaus_host_flagged": u.urlhaus_host_flagged, "urlhaus_host_url_count": u.urlhaus_host_url_count,
-             "sandbox": sandbox_results.get(u.actual_href)}
+             "sandbox": _public_sandbox_result(sandbox_results.get(u.actual_href))}
             for u in analysis.urls
         ],
         "attachments": [
