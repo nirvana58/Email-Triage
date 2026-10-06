@@ -53,6 +53,62 @@ const AccountBar = styled.div`
   }
 `;
 
+const Avatar = styled.div`
+  position: relative;
+  flex: 0 0 auto;
+  width: 32px;
+  height: 32px;
+  display: grid;
+  place-items: center;
+  background: var(--color-accent);
+  color: #fff;
+  border: 2px solid var(--color-ink);
+  box-shadow: 2px 2px 0 var(--color-ink);
+  font-family: var(--font-hud);
+  font-size: 14px;
+  font-weight: 700;
+  text-transform: uppercase;
+
+  &::after {
+    content: "";
+    position: absolute;
+    right: -5px;
+    bottom: -5px;
+    width: 9px;
+    height: 9px;
+    background: var(--color-success);
+    border: 2px solid var(--color-surface);
+    border-radius: 50%;
+  }
+`;
+
+const AccountInfo = styled.div`
+  flex: 1;
+  min-width: 0;
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+`;
+
+const AccountName = styled.span`
+  font-family: var(--font-hud);
+  font-size: 12px;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+`;
+
+const AccountStats = styled.span`
+  font-family: var(--font-hud);
+  font-size: 10px;
+  font-weight: 400;
+  color: var(--color-ink-soft);
+  white-space: nowrap;
+  @media (max-width: 700px) {
+    display: none;
+  }
+`;
+
 const toneColor = (tone) =>
   tone === "danger" ? "var(--color-danger)" : tone === "warning" ? "var(--color-warning)" : "var(--color-success)";
 
@@ -715,7 +771,13 @@ export default function EmailAnalyzerApp() {
           </HistoryList>
 
           <AccountBar>
-            <span title={username} style={{ fontFamily: "var(--font-hud)", fontSize: 12 }}> {username} </span>
+            <Avatar aria-hidden="true">{(username || "?").charAt(0)}</Avatar>
+            <AccountInfo>
+              <AccountName title={username}>{username}</AccountName>
+              <AccountStats>
+                {history.length} {history.length === 1 ? "analysis" : "analyses"}, {history.filter((h) => h.flag_count > 0).length} flagged
+              </AccountStats>
+            </AccountInfo>
             <HardButton $variant="ghost" onClick={signOut} style={{ padding: "6px 8px", fontSize: 11 }}>
               Sign out
             </HardButton>
