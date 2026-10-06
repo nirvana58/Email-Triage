@@ -426,7 +426,7 @@ const FindingsGrid = styled.div`
 const HomeLink = styled.a`
   position: absolute;
   top: 14px;
-  left: 14px;
+  right 14px;
   padding: 6px 12px;
   font-family: var(--font-hud);
   font-size: 12px;
@@ -643,7 +643,7 @@ export default function EmailAnalyzerApp() {
           <Pattern/>
           <AuthPanel onSubmit={submitAuth}>
             <HomeLink href="https://email-triage-xpk6.vercel.app/">← Home</HomeLink>
-            <Logo href="/" style={{ marginBottom: 24 ,marginTop:28}}>
+            <Logo href="/" style={{ marginBottom: 24 ,marginTop:30}}>
               <LogoMark>M</LogoMark>
               <span style={{ fontFamily: "var(--font-hud)", fontWeight: 700, fontSize: 14 }}>MAIL TRIAGE</span>
             </Logo>
