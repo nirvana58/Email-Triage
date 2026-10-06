@@ -715,7 +715,7 @@ export default function EmailAnalyzerApp() {
           </HistoryList>
 
           <AccountBar>
-            <span title={username}>{username}</span>
+            <span title={username} style={{ fontFamily: "var(--font-hud)", fontSize: 12 }}> {username} </span>
             <HardButton $variant="ghost" onClick={signOut} style={{ padding: "6px 8px", fontSize: 11 }}>
               Sign out
             </HardButton>
