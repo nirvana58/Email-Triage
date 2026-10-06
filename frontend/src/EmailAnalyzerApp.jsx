@@ -518,11 +518,6 @@ export default function EmailAnalyzerApp() {
     event.preventDefault();
     setAuthBusy(true);
     setAuthError("");
-    if (!API_BASE_URL) {
-      setAuthError("VITE_API_URL is missing from the Vercel frontend build. Set it to the Railway API URL, then redeploy Vercel.");
-      setAuthBusy(false);
-      return;
-    }
     const form = new FormData(event.currentTarget);
     const credentials = {
       username: form.get("username"),
@@ -544,9 +539,7 @@ export default function EmailAnalyzerApp() {
       setReport(null);
       setAuthError("");
     } catch (error) {
-      setAuthError(error instanceof TypeError
-        ? "Could not reach the API. Check VITE_API_URL and the Railway service's CORS allowlist, then redeploy."
-        : error.message || "Authentication failed.");
+      setAuthError(error.message || "Authentication failed.");
     } finally {
       setAuthBusy(false);
     }
@@ -627,7 +620,7 @@ export default function EmailAnalyzerApp() {
           <AuthPanel onSubmit={submitAuth}>
             <Logo href="/" style={{ marginBottom: 24 }}>
               <LogoMark>M</LogoMark>
-              <span style={{ fontFamily: "var(--font-hud)", fontWeight: 700, fontSize: 14 }}>MAIL TRIAGE</span>
+              <span style={{ fontFamily: "var(--font-hud)", fontWeight: 700, fontSize: 14, color: "var(--color-accent) ; " }}>MAIL TRIAGE</span>
             </Logo>
             <h1 style={{ fontFamily: "var(--font-hud)", fontSize: 21, margin: "0 0 8px" }}>
               {authMode === "login" ? "Sign in" : "Create account"}
