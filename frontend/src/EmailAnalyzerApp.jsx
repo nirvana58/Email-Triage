@@ -635,7 +635,7 @@ export default function EmailAnalyzerApp() {
             <label htmlFor="auth-username">Username</label>
             <AuthInput id="auth-username" name="username" autoComplete="username" minLength={3} maxLength={32} required />
             <label htmlFor="auth-password">Password</label>
-            <AuthInput id="auth-password" name="password" type="password" autoComplete={authMode === "login" ? "current-password" : "new-password"} minLength={12} maxLength={128} required />
+            <AuthInput id="auth-password" name="password" type="password" autoComplete={authMode === "login" ? "current-password" : "new-password"} minLength={5} maxLength={128} required />
             {authError && <p role="alert" style={{ color: "var(--color-danger)", fontSize: 13 }}>{authError}</p>}
             <HardButton type="submit" disabled={authBusy} style={{ width: "100%", marginTop: 8 }}>
               {authBusy ? "Please wait..." : authMode === "login" ? "Sign in" : "Create account"}
