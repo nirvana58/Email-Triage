@@ -423,6 +423,26 @@ const FindingsGrid = styled.div`
   }
 `;
 
+const HomeLink = styled.a`
+  position: absolute;
+  top: 14px;
+  left: 14px;
+  padding: 6px 12px;
+  font-family: var(--font-hud);
+  font-size: 12px;
+  font-weight: 700;
+  text-decoration: none;
+  color: var(--color-accent);
+  border: 2px solid var(--color-accent);
+  background: transparent;
+  cursor: pointer;
+
+  &:hover {
+    background: var(--color-accent);
+    color: #fff;
+  }
+`;
+
 /* ---------- App ---------- */
 
 export default function EmailAnalyzerApp() {
@@ -622,7 +642,8 @@ export default function EmailAnalyzerApp() {
         <AuthPage>
           <Pattern/>
           <AuthPanel onSubmit={submitAuth}>
-            <Logo href="/" style={{ marginBottom: 24 }}>
+            <HomeLink href="https://email-triage-xpk6.vercel.app/">← Home</HomeLink>
+            <Logo href="/" style={{ marginBottom: 24 ,marginTop:28}}>
               <LogoMark>M</LogoMark>
               <span style={{ fontFamily: "var(--font-hud)", fontWeight: 700, fontSize: 14 }}>MAIL TRIAGE</span>
             </Logo>
