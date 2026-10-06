@@ -88,6 +88,7 @@ const AccountInfo = styled.div`
   display: flex;
   flex-direction: column;
   gap: 2px;
+  align-items: flex-start;
 `;
 
 const AccountName = styled.span`
