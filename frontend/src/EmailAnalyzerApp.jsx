@@ -2,6 +2,7 @@ import React, { useState, useCallback } from "react";
 import styled from "styled-components";
 import GlobalStyle from "./GlobalStyle";
 import TypewriterLoader from "./TypewriterLoader";
+import Pattern from "./Pattern";
 
 const API_BASE_URL = (import.meta.env.VITE_API_URL || "").replace(/\/+$/, "");
 const apiUrl = (path) => `${API_BASE_URL}${path}`;
@@ -21,6 +22,8 @@ const AuthPanel = styled.form`
   border: 2px solid var(--color-ink);
   box-shadow: 5px 5px 0 var(--color-ink);
   padding: 24px;
+  position: relative;
+  z-index: 1;
 `;
 
 const AuthInput = styled.input`
@@ -29,7 +32,7 @@ const AuthInput = styled.input`
   margin: 6px 0 14px;
   padding: 10px;
   border: 2px solid var(--color-ink);
-  background: var(--color-bone);
+  background: var(--color-surface, #fff);
   color: var(--color-ink);
   font: inherit;
 `;
@@ -617,6 +620,7 @@ export default function EmailAnalyzerApp() {
       <>
         <GlobalStyle />
         <AuthPage>
+          <Pattern/>
           <AuthPanel onSubmit={submitAuth}>
             <Logo href="/" style={{ marginBottom: 24 }}>
               <LogoMark>M</LogoMark>
