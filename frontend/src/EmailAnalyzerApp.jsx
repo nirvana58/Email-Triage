@@ -620,9 +620,9 @@ export default function EmailAnalyzerApp() {
           <AuthPanel onSubmit={submitAuth}>
             <Logo href="/" style={{ marginBottom: 24 }}>
               <LogoMark>M</LogoMark>
-              <span style={{ fontFamily: "var(--font-hud)", fontWeight: 700, fontSize: 14, color: "var(--color-accent) ; " }}>MAIL TRIAGE</span>
+              <span style={{ fontFamily: "var(--font-hud)", fontWeight: 700, fontSize: 14 }}>MAIL TRIAGE</span>
             </Logo>
-            <h1 style={{ fontFamily: "var(--font-hud)", fontSize: 21, margin: "0 0 8px" }}>
+            <h1 style={{ fontFamily: "var(--font-hud)", fontSize: 21, margin: "0 0 8px",color: "var(--color-accent)"  }}>
               {authMode === "login" ? "Sign in" : "Create account"}
             </h1>
             <p style={{ color: "var(--color-ink-soft)", fontSize: 13, margin: "0 0 20px" }}>
@@ -902,15 +902,15 @@ export default function EmailAnalyzerApp() {
                             )}
                             {u.sandbox.screenshot_available && (
                               <div style={{ marginTop: 8 }}>
-                                {currentScreenshotPreviews[u.actual_href] ? (
+                                {screenshotPreviews[u.actual_href] ? (
                                   <a
-                                    href={currentScreenshotPreviews[u.actual_href]}
+                                    href={screenshotPreviews[u.actual_href]}
                                     target="_blank"
                                     rel="noreferrer"
                                     aria-label={`Open screenshot preview for ${u.actual_href}`}
                                   >
                                     <SandboxScreenshot
-                                      src={currentScreenshotPreviews[u.actual_href]}
+                                      src={screenshotPreviews[u.actual_href]}
                                       alt={`Rendered page screenshot for ${u.actual_href}`}
                                     />
                                   </a>
