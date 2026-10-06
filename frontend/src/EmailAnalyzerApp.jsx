@@ -423,10 +423,14 @@ const FindingsGrid = styled.div`
   }
 `;
 
+const TopRow = styled.div`
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  margin-bottom: 24px;
+`;
+
 const HomeLink = styled.a`
-  position: absolute;
-  top: 14px;
-  right 14px;
   padding: 6px 12px;
   font-family: var(--font-hud);
   font-size: 12px;
@@ -642,11 +646,12 @@ export default function EmailAnalyzerApp() {
         <AuthPage>
           <Pattern/>
           <AuthPanel onSubmit={submitAuth}>
-            <HomeLink href="https://email-triage-xpk6.vercel.app/">← Home</HomeLink>
             <Logo href="/" style={{ marginBottom: 24 ,marginTop:30}}>
               <LogoMark>M</LogoMark>
               <span style={{ fontFamily: "var(--font-hud)", fontWeight: 700, fontSize: 14 }}>MAIL TRIAGE</span>
             </Logo>
+            <HomeLink href="https://email-triage-xpk6.vercel.app/">← Home</HomeLink>
+            <TopRow/>
             <h1 style={{ fontFamily: "var(--font-hud)", fontSize: 21, margin: "0 0 8px",color: "var(--color-accent)"  }}>
               {authMode === "login" ? "Sign in" : "Create account"}
             </h1>
