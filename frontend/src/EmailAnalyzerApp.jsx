@@ -38,22 +38,27 @@ const AuthInput = styled.input`
 `;
 
 const AccountBar = styled.div`
-  display: flex;
+  display: grid;
+  grid-template-columns: auto minmax(0, 1fr) auto;
+  grid-template-areas:
+    "avatar name signout"
+    "stats stats stats";
   align-items: center;
-  justify-content: space-between;
-  gap: 8px;
+  column-gap: 10px;
+  row-gap: 8px;
   margin: auto 0 12px;
   min-width: 0;
   font-size: 12px;
   font-weight: 700;
-  overflow-wrap: anywhere;
   @media (max-width: 700px) {
     grid-area: account;
     margin: 0;
+    row-gap: 0;
   }
 `;
 
 const Avatar = styled.div`
+  grid-area: avatar;
   position: relative;
   flex: 0 0 auto;
   width: 32px;
@@ -82,16 +87,9 @@ const Avatar = styled.div`
   }
 `;
 
-const AccountInfo = styled.div`
-  flex: 1;
-  min-width: 0;
-  display: flex;
-  flex-direction: column;
-  gap: 2px;
-  align-items: flex-start;
-`;
-
 const AccountName = styled.span`
+  grid-area: name;
+  min-width: 0;
   font-family: var(--font-hud);
   font-size: 12px;
   overflow: hidden;
@@ -100,11 +98,11 @@ const AccountName = styled.span`
 `;
 
 const AccountStats = styled.span`
+  grid-area: stats;
   font-family: var(--font-hud);
   font-size: 10px;
   font-weight: 400;
   color: var(--color-ink-soft);
-  white-space: nowrap;
   @media (max-width: 700px) {
     display: none;
   }
@@ -773,15 +771,13 @@ export default function EmailAnalyzerApp() {
 
           <AccountBar>
             <Avatar aria-hidden="true">{(username || "?").charAt(0)}</Avatar>
-            <AccountInfo>
-              <AccountName title={username}>{username}</AccountName>
-              <AccountStats>
-                {history.length} {history.length === 1 ? "analysis" : "analyses"}, {history.filter((h) => h.flag_count > 0).length} flagged
-              </AccountStats>
-            </AccountInfo>
-            <HardButton $variant="ghost" onClick={signOut} style={{ padding: "6px 8px", fontSize: 11 }}>
+            <AccountName title={username}>{username}</AccountName>
+            <HardButton $variant="ghost" onClick={signOut} style={{ gridArea: "signout", padding: "6px 8px", fontSize: 11 }}>
               Sign out
             </HardButton>
+            <AccountStats>
+              {history.length} {history.length === 1 ? "analysis" : "analyses"}, {history.filter((h) => h.flag_count > 0).length} flagged
+            </AccountStats>
           </AccountBar>
 
           <HardButton $variant="ghost" onClick={() => setTheme(theme === "light" ? "dark" : "light")} style={{ marginTop: 12 }}>
