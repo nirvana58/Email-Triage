@@ -39,19 +39,22 @@ const AuthInput = styled.input`
 
 const AccountBar = styled.div`
   display: grid;
-  grid-template-columns: auto minmax(0, 1fr) auto;
+  grid-template-columns: auto minmax(0, 1fr);
   grid-template-areas:
-    "avatar name signout"
-    "stats stats stats";
+    "avatar name"
+    "stats stats"
+    "signout signout";
   align-items: center;
   column-gap: 10px;
-  row-gap: 8px;
+  row-gap: 10px;
   margin: auto 0 12px;
   min-width: 0;
   font-size: 12px;
   font-weight: 700;
   @media (max-width: 700px) {
     grid-area: account;
+    grid-template-columns: auto minmax(0, 1fr) auto;
+    grid-template-areas: "avatar name signout";
     margin: 0;
     row-gap: 0;
   }
@@ -772,7 +775,7 @@ export default function EmailAnalyzerApp() {
           <AccountBar>
             <Avatar aria-hidden="true">{(username || "?").charAt(0)}</Avatar>
             <AccountName title={username}>{username}</AccountName>
-            <HardButton $variant="ghost" onClick={signOut} style={{ gridArea: "signout", padding: "6px 8px", fontSize: 11 }}>
+            <HardButton $variant="ghost" onClick={signOut} style={{ gridArea: "signout", justifySelf: "start", padding: "6px 12px", fontSize: 11 }}>
               Sign out
             </HardButton>
             <AccountStats>
