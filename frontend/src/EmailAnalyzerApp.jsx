@@ -389,22 +389,231 @@ const Main = styled.main`
 const Dropzone = styled.div`
   border: 3px dashed ${(p) => (p.$active ? "var(--color-accent)" : "var(--color-ink)")};
   background: ${(p) => (p.$active ? "var(--color-surface)" : "transparent")};
-  height: calc(100vh - 64px);
+  box-sizing: border-box;
+  max-width: 1000px;
+  height: clamp(170px, 24vh, 230px);
   display: flex;
   flex-direction: column;
   align-items: center;
   justify-content: center;
+  gap: 4px;
   text-align: center;
   cursor: pointer;
-  transition: border-color 0.15s ease, background 0.15s ease;
+  transition: border-color 0.15s ease, background 0.15s ease, transform 0.1s ease;
+  &:hover {
+    border-color: var(--color-accent);
+    transform: translate(-1px, -1px);
+  }
   @media (max-width: 700px) {
-    box-sizing: border-box;
     width: 100%;
-    height: min(58vh, 420px);
-    min-height: 260px;
+    height: 180px;
     padding: 18px;
   }
 `;
+
+const DropIcon = styled.div`
+  display: grid;
+  place-items: center;
+  width: 38px;
+  height: 38px;
+  margin-bottom: 6px;
+  font-family: var(--font-hud);
+  font-size: 20px;
+  font-weight: 700;
+  color: #fff;
+  background: var(--color-accent);
+  border: 2px solid var(--color-ink);
+  box-shadow: 3px 3px 0 0 var(--color-ink);
+`;
+
+// ---- Landing board (shown under the dropzone before an email is analysed) ----
+const Board = styled.div`
+  display: grid;
+  gap: 16px;
+  max-width: 1000px;
+  margin-top: 20px;
+`;
+
+const StatRow = styled.div`
+  display: grid;
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+  gap: 12px;
+  @media (max-width: 700px) {
+    grid-template-columns: 1fr;
+  }
+`;
+
+const StatTile = styled.div`
+  background: var(--color-surface);
+  border: 2px solid var(--color-ink);
+  box-shadow: 3px 3px 0 0 var(--color-ink);
+  padding: 12px 14px;
+`;
+
+const StatValue = styled.div`
+  font-family: var(--font-hud);
+  font-size: 28px;
+  font-weight: 700;
+  line-height: 1.1;
+  color: ${(p) => (p.$tone ? toneColor(p.$tone) : "var(--color-ink)")};
+`;
+
+const StatLabel = styled.div`
+  margin-top: 2px;
+  font-family: var(--font-hud);
+  font-size: 11px;
+  letter-spacing: 0.06em;
+  text-transform: uppercase;
+  color: var(--color-ink-soft);
+`;
+
+const TwoCol = styled.div`
+  display: grid;
+  grid-template-columns: minmax(0, 1.5fr) minmax(0, 1fr);
+  gap: 16px;
+  align-items: start;
+  @media (max-width: 900px) {
+    grid-template-columns: 1fr;
+  }
+`;
+
+const CheckGrid = styled.div`
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(140px, 1fr));
+  gap: 10px;
+`;
+
+const CheckCard = styled.button`
+  text-align: left;
+  font: inherit;
+  font-size: 13px;
+  font-weight: 700;
+  cursor: pointer;
+  padding: 10px 12px;
+  color: ${(p) => (p.$active ? "#fff" : "var(--color-ink)")};
+  background: ${(p) => (p.$active ? "var(--color-accent)" : "var(--color-surface)")};
+  border: 2px solid var(--color-ink);
+  box-shadow: ${(p) => (p.$active ? "1px 1px 0 0" : "3px 3px 0 0")} var(--color-ink);
+  transform: ${(p) => (p.$active ? "translate(2px, 2px)" : "none")};
+  transition: transform 0.08s ease, box-shadow 0.08s ease, background 0.12s ease;
+  &:hover {
+    transform: translate(2px, 2px);
+    box-shadow: 1px 1px 0 0 var(--color-ink);
+  }
+`;
+
+const RecentItem = styled.button`
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 8px;
+  width: 100%;
+  text-align: left;
+  font: inherit;
+  color: inherit;
+  cursor: pointer;
+  padding: 8px 10px;
+  margin-bottom: 8px;
+  background: var(--color-surface);
+  border: 2px solid var(--color-ink);
+  transition: background 0.12s ease, transform 0.08s ease;
+  &:last-of-type { margin-bottom: 0; }
+  &:hover {
+    transform: translateX(3px);
+    border-color: var(--color-accent);
+  }
+`;
+
+const CHECKS = [
+  { icon: "01", title: "Authentication", text: "Reads the SPF, DKIM and DMARC results to see whether the sender is who they claim to be." },
+  { icon: "02", title: "Sender reputation", text: "Looks up how old the sender's domain is and the abuse score of the sending IP. Brand-new domains are a classic phishing signal." },
+  { icon: "03", title: "Received chain", text: "Lists every server hop the message passed through, so odd routing or spoofed hops stand out." },
+  { icon: "04", title: "Link mismatch", text: "Flags links where the text you see points to a different destination than the real URL behind it." },
+  { icon: "05", title: "Known-bad URLs", text: "Checks every link and its host against URLhaus records of malicious URLs." },
+  { icon: "06", title: "Link sandbox", text: "Visits links in an isolated sandbox, reports risk signals, and keeps a screenshot of the landing page when available." },
+];
+
+const TIPS = [
+  "Hover before you click. The text of a link can say anything; only the destination matters.",
+  "A sender domain registered in the last 30 days is a common phishing signal.",
+  "Passing SPF and DKIM doesn't make an email safe. Attackers can authenticate their own look-alike domains.",
+  "Urgency is a tactic. \"Act within 24 hours\" language is designed to skip your judgment.",
+  "To keep every header for analysis, forward the suspicious email as an attachment instead of inline.",
+];
+
+function LandingBoard({ history, onOpen }) {
+  const [activeCheck, setActiveCheck] = React.useState(0);
+  const [tipIndex, setTipIndex] = React.useState(() => Math.floor(Math.random() * TIPS.length));
+  const flagged = history.filter((h) => h.flag_count > 0).length;
+  const recent = history.slice(0, 3);
+
+  return (
+    <Board>
+      <StatRow>
+        <StatTile>
+          <StatValue>{history.length}</StatValue>
+          <StatLabel>Analyses</StatLabel>
+        </StatTile>
+        <StatTile>
+          <StatValue $tone={flagged > 0 ? "danger" : undefined}>{flagged}</StatValue>
+          <StatLabel>Flagged</StatLabel>
+        </StatTile>
+        <StatTile>
+          <StatValue $tone={history.length - flagged > 0 ? "success" : undefined}>{history.length - flagged}</StatValue>
+          <StatLabel>Clean</StatLabel>
+        </StatTile>
+      </StatRow>
+
+      <TwoCol>
+        <Panel style={{ margin: 0 }}>
+          <Legend>What gets checked</Legend>
+          <CheckGrid>
+            {CHECKS.map((c, i) => (
+              <CheckCard key={c.title} type="button" $active={i === activeCheck} onClick={() => setActiveCheck(i)}>
+                <span style={{ fontFamily: "var(--font-hud)", fontSize: 11, opacity: 0.7 }}>{c.icon}</span>
+                <br />
+                {c.title}
+              </CheckCard>
+            ))}
+          </CheckGrid>
+          <p aria-live="polite" style={{ margin: "14px 0 0", fontSize: 13, color: "var(--color-ink-soft)", lineHeight: 1.5 }}>
+            {CHECKS[activeCheck].text}
+          </p>
+        </Panel>
+
+        <div style={{ display: "grid", gap: 16 }}>
+          <Panel style={{ margin: 0 }}>
+            <Legend>Recent analyses</Legend>
+            {recent.length === 0 ? (
+              <p style={{ margin: 0, fontSize: 13, color: "var(--color-ink-soft)" }}>
+                Nothing here yet. Drop your first email above to get started.
+              </p>
+            ) : (
+              recent.map((item) => (
+                <RecentItem key={item.id} type="button" onClick={() => onOpen(item)}>
+                  <span style={{ minWidth: 0 }}>
+                    <span style={{ display: "block", fontSize: 12.5, overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>{item.filename}</span>
+                    <span style={{ display: "block", fontFamily: "var(--font-hud)", fontSize: 10, color: "var(--color-ink-soft)" }}>{formatTimestamp(item.timestamp)}</span>
+                  </span>
+                  <Badge $tone={item.flag_count > 2 ? "danger" : item.flag_count > 0 ? "warning" : "success"}>{item.flag_count}</Badge>
+                </RecentItem>
+              ))
+            )}
+          </Panel>
+
+          <Panel style={{ margin: 0 }}>
+            <Legend>Did you know</Legend>
+            <p aria-live="polite" style={{ margin: "0 0 12px", fontSize: 13, lineHeight: 1.5 }}>{TIPS[tipIndex]}</p>
+            <HardButton type="button" $variant="ghost" onClick={() => setTipIndex((tipIndex + 1) % TIPS.length)} style={{ fontSize: 11, padding: "6px 10px" }}>
+              Next tip
+            </HardButton>
+          </Panel>
+        </div>
+      </TwoCol>
+    </Board>
+  );
+}
+
 
 // Unlike Row (fixed 100px label), a URL's anchor text is unbounded in length,
 // so this stacks anchor text and destination vertically instead of forcing
@@ -805,12 +1014,14 @@ export default function EmailAnalyzerApp() {
             >
               <input id="file-input" type="file" accept=".eml,.msg" style={{ display: "none" }}
                      onChange={(e) => handleFile(e.target.files[0])} />
-              <p style={{ margin: "0 0 6px" }}>
-                {loading ? <TypewriterLoader /> : "DROP A .EML OR .MSG FILE"}
+              {!loading && <DropIcon aria-hidden="true">{dragOver ? "+" : "\u2191"}</DropIcon>}
+              <p style={{ margin: "0 0 2px" }}>
+                {loading ? <TypewriterLoader /> : dragOver ? "RELEASE TO ANALYSE" : "DROP A .EML OR .MSG FILE"}
               </p>
               {!loading && <p style={{ color: "var(--color-ink-soft)", margin: 0, fontSize: 13 }}>or click to browse</p>}
             </Dropzone>
           )}
+          {!report && <LandingBoard history={history} onOpen={openHistoryItem} />}
 
           {report && (
             <div style={{ maxWidth: 1000 }}>
