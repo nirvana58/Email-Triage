@@ -450,7 +450,7 @@ const StatTile = styled.div`
   padding: 12px 14px;
 `;
 
-const StatValue = styled.div`
+const TileValue = styled.div`
   font-family: var(--font-hud);
   font-size: 28px;
   font-weight: 700;
@@ -458,7 +458,7 @@ const StatValue = styled.div`
   color: ${(p) => (p.$tone ? toneColor(p.$tone) : "var(--color-ink)")};
 `;
 
-const StatLabel = styled.div`
+const TileLabel = styled.div`
   margin-top: 2px;
   font-family: var(--font-hud);
   font-size: 11px;
@@ -551,16 +551,16 @@ function LandingBoard({ history, onOpen }) {
     <Board>
       <StatRow>
         <StatTile>
-          <StatValue>{history.length}</StatValue>
-          <StatLabel>Analyses</StatLabel>
+          <TileValue>{history.length}</TileValue>
+          <TileLabel>Analyses</TileLabel>
         </StatTile>
         <StatTile>
-          <StatValue $tone={flagged > 0 ? "danger" : undefined}>{flagged}</StatValue>
-          <StatLabel>Flagged</StatLabel>
+          <TileValue $tone={flagged > 0 ? "danger" : undefined}>{flagged}</TileValue>
+          <TileLabel>Flagged</TileLabel>
         </StatTile>
         <StatTile>
-          <StatValue $tone={history.length - flagged > 0 ? "success" : undefined}>{history.length - flagged}</StatValue>
-          <StatLabel>Clean</StatLabel>
+          <TileValue $tone={history.length - flagged > 0 ? "success" : undefined}>{history.length - flagged}</TileValue>
+          <TileLabel>Clean</TileLabel>
         </StatTile>
       </StatRow>
 
