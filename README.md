@@ -6,7 +6,7 @@ Mail Triage is an email analysis tool that helps security teams triage suspiciou
 
 Instead of reading raw headers and checking every link by hand, you get the signals analysts actually check. The email body is never stored or shown.
 
-**Live:** [Landing page](https://email-triage-xpk6.vercel.app/) · [Try the app](https://email-triage-19oh-chi.vercel.app/)
+**Live:** [Landing page](https://email-triage-xpk6.vercel.app/)
 
 ## Features
 
