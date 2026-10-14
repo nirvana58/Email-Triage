@@ -1,6 +1,7 @@
 # Mail Triage + PhishGuard
 
-https://github.com/user-attachments/assets/f0513bc1-9dd5-424f-97a8-49348df4d8f6
+<video src="https://github.com/user-attachments/assets/f0513bc1-9dd5-424f-97a8-49348df4d8f6" controls width="100%"></video>
+
 Mail Triage is an email analysis tool that helps security teams triage suspicious messages quickly. Upload a `.eml` or `.msg` file and it parses headers, checks authentication results, enriches sender/routing data with threat intelligence, extracts links and attachments, and — via a bridge to the companion **PhishGuard** service — runs deeper URL and domain analysis, returning a combined PDF report.
 
 Instead of manually reading raw headers and checking every link by hand, the system automates:
