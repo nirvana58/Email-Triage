@@ -7,7 +7,7 @@ Instead of reading raw headers and checking every link by hand, you get the sign
 **Live:** [Landing Page](https://email-triage-xpk6.vercel.app/)
 
 
-  <video src="https://github.com/user-attachments/assets/f0513bc1-9dd5-424f-97a8-49348df4d8f6"></video>
+ https://github.com/user-attachments/assets/f0513bc1-9dd5-424f-97a8-49348df4d8f6
 
 
 ## Features
